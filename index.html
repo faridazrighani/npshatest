@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moody Chart Research Workbench</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Pipe-flow friction analysis</p>
+        <h1>Moody Chart Research Workbench</h1>
+        <p class="lede">
+          Interactive Darcy-Weisbach evaluation for incompressible single-phase liquid flow in circular pipes.
+          The workflow follows the classical engineering sequence: velocity -> Reynolds number ->
+          relative roughness -> friction factor -> pressure drop or head loss, now extended to
+          Hydraulic Institute style system-head evaluation.
+        </p>
+      </div>
+      <aside class="hero-note">
+        <h2>Scope and conventions</h2>
+        <p>Darcy friction factor, SI units, steady fully developed internal liquid flow, circular pipes.</p>
+        <p>Laminar flow uses the exact relation <code>f = 64 / Re</code>; turbulent flow is solved with Colebrook-White; the transitional band is flagged and estimated with Churchill. Supply pressure, destination pressure, elevation, and minor losses extend the liquid-line calculation to Hydraulic Institute style system-head service.</p>
+      </aside>
+    </header>
+
+    <nav class="tabs" aria-label="Main application tabs">
+      <button class="tab active" type="button" data-tab-target="analysis-tab">Analysis</button>
+      <button class="tab" type="button" data-tab-target="method-tab">Method</button>
+      <button class="tab" type="button" data-tab-target="references-tab">References</button>
+    </nav>
+
+    <main>
+      <section class="tab-panel active" id="analysis-tab">
+        <div class="layout-grid">
+          <section class="panel control-panel">
+            <div class="panel-header">
+              <h2>Input Parameters</h2>
+              <p>Provide liquid properties, pipe geometry, and line operating conditions.</p>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title-row">
+                <h3>Fluid Data</h3>
+                <span class="section-note">Flow basis, liquid properties, and operating envelope</span>
+              </div>
+              <label>
+                <span>Fluid preset</span>
+                <select id="fluidPreset"></select>
+              </label>
+              <div class="two-column">
+                <label>
+                  <span>Design flow rate, Q (m^3/s)</span>
+                  <input id="flowRate" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+                <label>
+                  <span>Mass flow rate, mdot (kg/s)</span>
+                  <input id="massFlowRate" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+              </div>
+              <div class="two-column">
+                <label>
+                  <span>Density, rho (kg/m^3)</span>
+                  <input id="density" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+                <label>
+                  <span>Dynamic viscosity, mu (Pa.s)</span>
+                  <input id="viscosity" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+              </div>
+              <div class="two-column">
+                <label>
+                  <span>Operating temperature, T (degC)</span>
+                  <input id="temperature" type="number" step="any" inputmode="decimal">
+                </label>
+                <label>
+                  <span>Maximum temperature, Tmax (degC)</span>
+                  <input id="maxTemperature" type="number" step="any" inputmode="decimal">
+                </label>
+              </div>
+              <label>
+                <span>Vapor pressure, Pv (Pa abs)</span>
+                <input id="vaporPressure" type="number" min="0" step="any" inputmode="decimal">
+              </label>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title-row">
+                <h3>Pipe and Surface Data</h3>
+                <span class="section-note">Diameter, length, and wall roughness</span>
+              </div>
+              <label>
+                <span>Material roughness preset</span>
+                <select id="materialPreset"></select>
+              </label>
+              <div class="two-column">
+                <label>
+                  <span>Pipe diameter, D (m)</span>
+                  <input id="diameter" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+                <label>
+                  <span>Pipe length, L (m)</span>
+                  <input id="length" type="number" min="0" step="any" inputmode="decimal">
+                </label>
+              </div>
+              <label>
+                <span>Absolute roughness, epsilon (m)</span>
+                <input id="roughness" type="number" min="0" step="any" inputmode="decimal">
+              </label>
+              <p class="helper-text">Velocity is evaluated from <code>V = 4Q / (pi D^2)</code> once the internal diameter is specified.</p>
+            </div>
+
+            <div class="field-group">
+              <div class="section-title-row">
+                <h3>Operating Pressure and System Losses</h3>
+                <span class="section-note">Absolute pressure basis, elevation head, and aggregate minor losses</span>
+              </div>
+              <div class="system-loss-layout">
+                <div class="system-loss-block system-loss-block-compact system-loss-block-basis">
+                  <div class="mini-block-head">
+                    <h4>Pressure Basis</h4>
+                    <p>Define the supply and destination boundary pressures together with the Hydraulic Institute elevation sign convention.</p>
+                  </div>
+                  <div class="two-column system-loss-grid system-pressure-grid">
+                    <label>
+                      <span>Supply pressure, p_supply (Pa abs)</span>
+                      <input id="supplyPressure" type="number" min="0" step="any" inputmode="decimal">
+                    </label>
+                    <label>
+                      <span>Destination pressure, p_destination (Pa abs)</span>
+                      <input id="destinationPressure" type="number" min="0" step="any" inputmode="decimal">
+                    </label>
+                  </div>
+                  <label class="system-loss-single-field">
+                    <span>Elevation difference, Delta z = z_destination - z_supply (m)</span>
+                    <input id="elevationChange" type="number" step="any" inputmode="decimal">
+                  </label>
+                </div>
+
+                <div class="system-loss-block system-loss-block-wide">
+                  <div class="minor-loss-builder">
+                    <div class="minor-loss-builder-head">
+                      <h4>Minor-Loss Builder</h4>
+                      <p>Common liquid-service fittings with editable default <code>K</code> values for validation and project-specific adjustment.</p>
+                    </div>
+                    <div class="fitting-grid-header" aria-hidden="true">
+                      <span>Fitting item</span>
+                      <span>Count</span>
+                      <span>K each</span>
+                      <span>Subtotal</span>
+                    </div>
+                    <div id="minorLossBuilderRows" class="fitting-grid-body"></div>
+                    <p class="minor-loss-citation">
+                      Default <code>K</code> values are typical engineering references aligned with handbook-style guidance. Final design should be checked against vendor/manufacturer data, Hydraulic Institute style references, or project standards when available.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="system-loss-block system-loss-block-accent system-loss-block-compact system-loss-block-sigmak">
+                  <div class="mini-block-head">
+                    <h4>SigmaK Consolidation</h4>
+                    <p>Review the fitting total, add any project allowance, and confirm the coefficient sent to the hydraulic solver.</p>
+                  </div>
+                  <div class="minor-loss-summary">
+                    <article class="minor-summary-card">
+                      <span class="result-label">Fitting SigmaK</span>
+                      <strong id="fittingSigmaKDisplay">0</strong>
+                    </article>
+                    <article class="minor-summary-card minor-summary-card-total">
+                      <span class="result-label">Total SigmaK</span>
+                      <strong id="totalSigmaKDisplay">0</strong>
+                    </article>
+                  </div>
+                  <div class="two-column system-loss-grid">
+                    <label>
+                      <span>Additional custom SigmaK (-)</span>
+                      <input id="additionalMinorLossCoefficient" type="number" min="0" step="any" inputmode="decimal" value="0">
+                    </label>
+                    <label>
+                      <span>Total minor-loss coefficient, SigmaK (-)</span>
+                      <input id="minorLossCoefficient" type="number" min="0" step="any" inputmode="decimal" readonly>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <p class="helper-text">Use a positive <code>Delta z</code> when the outlet is above the inlet. The builder sums <code>count x K</code> for listed fittings, then adds any custom allowance to produce the total <code>SigmaK</code> used in the hydraulic calculation.</p>
+            </div>
+
+            <div class="action-row">
+              <button class="secondary-button" id="sampleButton" type="button">Load benchmark example</button>
+            </div>
+
+            <div class="error-box" id="errorBox" hidden></div>
+          </section>
+
+          <section class="panel visual-panel">
+            <div class="panel-header">
+              <h2>Moody Chart, System Curve, and Calculated Outputs</h2>
+              <p>The operating point is plotted on the Moody diagram and on an HI-style total system head curve.</p>
+            </div>
+
+            <div class="chart-card">
+              <div class="chart-stage">
+                <canvas id="moodyChart" width="920" height="560" aria-label="Moody chart canvas"></canvas>
+              </div>
+
+            </div>
+
+            <div class="chart-card secondary-chart-card">
+              <div class="chart-card-header chart-card-header-split">
+                <div>
+                  <h3>System Curve</h3>
+                  <p>Total system head is evaluated as static head plus major and minor losses over a range of flow rates.</p>
+                </div>
+                <div class="unit-switch" role="group" aria-label="System curve display units">
+                  <button class="unit-switch-button active" id="systemUnitSi" type="button" data-system-unit="si">SI</button>
+                  <button class="unit-switch-button" id="systemUnitUs" type="button" data-system-unit="us">US</button>
+                </div>
+              </div>
+              <div class="chart-stage system-curve-stage">
+                <canvas id="systemCurveChart" width="920" height="360" aria-label="System curve chart canvas"></canvas>
+              </div>
+              <div class="system-curve-table-wrap">
+                <div class="system-curve-table-head">
+                  <h4>System Curve Data</h4>
+                  <p>Inputs remain in SI. The switch changes only the chart and table presentation units.</p>
+                </div>
+                <div class="system-curve-table-scroll">
+                  <table class="system-curve-table">
+                    <thead>
+                      <tr>
+                        <th id="systemCurveFlowHeading">Flow Rate (m^3/s)</th>
+                        <th id="systemCurveVelocityHeading">Velocity (m/s)</th>
+                        <th id="systemCurveHeadHeading">System Head (m)</th>
+                      </tr>
+                    </thead>
+                    <tbody id="systemCurveTableBody">
+                      <tr>
+                        <td colspan="3">Evaluate the system to generate tabulated curve data.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="status-strip">
+              <div>
+                <span class="status-label">Flow regime</span>
+                <strong id="flowRegime">Awaiting evaluation</strong>
+              </div>
+              <div>
+                <span class="status-label">Friction model</span>
+                <strong id="frictionMethod">Not yet computed</strong>
+              </div>
+              <div>
+                <span class="status-label">Kinematic viscosity</span>
+                <strong id="kinematicViscosity">-</strong>
+              </div>
+            </div>
+
+            <div class="results-grid">
+              <article class="result-card">
+                <span class="result-label">Mass flow rate</span>
+                <strong id="massFlowRateOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Fluid velocity</span>
+                <strong id="velocityOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Reynolds number</span>
+                <strong id="reynoldsOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Relative roughness</span>
+                <strong id="relativeRoughnessOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Darcy friction factor</span>
+                <strong id="frictionFactorOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Total minor-loss coefficient</span>
+                <strong id="totalMinorLossCoefficientOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Major pressure drop</span>
+                <strong id="pressureDropOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Major head loss</span>
+                <strong id="headLossOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Minor-loss pressure</span>
+                <strong id="minorPressureDropOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Minor-loss head</span>
+                <strong id="minorHeadLossOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Boundary pressure differential</span>
+                <strong id="boundaryPressureDifferenceOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Static pressure differential</span>
+                <strong id="staticPressureChangeOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Static head</span>
+                <strong id="staticHeadOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Total pressure differential</span>
+                <strong id="totalPressureOutput">-</strong>
+              </article>
+              <article class="result-card">
+                <span class="result-label">Total system head</span>
+                <strong id="totalHeadOutput">-</strong>
+              </article>
+            </div>
+
+            <article class="narrative-card">
+              <h3>Interpretation</h3>
+              <p id="interpretationText">
+                Enter the governing parameters and run the evaluation to obtain a research-style engineering summary.
+              </p>
+            </article>
+
+            <article class="narrative-card">
+              <h3>Process Notes</h3>
+              <p id="processNotesText">
+                Optional process-data fields can be used for pressure-basis review, elevation and minor-loss accounting, thermal-limit review, and vapor-pressure documentation.
+              </p>
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="method-tab">
+        <div class="panel prose-panel">
+          <div class="panel-header">
+            <h2>Calculation Method</h2>
+            <p>The implementation follows the conventional Darcy-Weisbach and Colebrook framework used in mechanical and hydraulic engineering.</p>
+          </div>
+
+          <div class="method-grid">
+            <article class="formula-card">
+              <h3>1. Mean velocity</h3>
+              <pre><code>Area = pi D^2 / 4
+V = Q / Area = 4Q / (pi D^2)</code></pre>
+              <p>The mean bulk velocity is determined from the volumetric flow rate and internal pipe diameter.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>2. Reynolds number</h3>
+              <pre><code>Re = rho V D / mu = V D / nu</code></pre>
+              <p>This parameter determines whether the flow is laminar, transitional, or turbulent.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>3. Relative roughness</h3>
+              <pre><code>epsilon / D</code></pre>
+              <p>The non-dimensional wall roughness locates the operating point among the roughness families of the Moody chart.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>4. Friction factor</h3>
+              <pre><code>Laminar:      f = 64 / Re
+Transitional: Churchill correlation (flagged)
+Turbulent:    Colebrook-White solved iteratively</code></pre>
+              <p>The turbulent solver uses a Swamee-Jain explicit estimate as the initial guess, then refines the Darcy friction factor by fixed-point iteration.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>5. Major pressure drop</h3>
+              <pre><code>DeltaP = f (L / D) (rho V^2 / 2)</code></pre>
+              <p>This relation yields the distributed pressure loss caused by wall friction along the specified length.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>6. Major head loss</h3>
+              <pre><code>hf = f (L / D) (V^2 / 2g)</code></pre>
+              <p>The head-loss form is often preferred in pump, piping-network, and hydraulic-grade-line calculations.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>7. Minor losses</h3>
+              <pre><code>DeltaP_minor = SigmaK (rho V^2 / 2)
+hm = SigmaK (V^2 / 2g)</code></pre>
+              <p>Aggregate local losses are assembled from <code>SigmaK = sum(n_i K_i) + K_additional</code>, covering fittings, valves, entrances, exits, and comparable disturbances.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>8. Static head (HI form)</h3>
+              <pre><code>Delta h_stat = Delta z + (p_destination - p_supply) / (rho g)</code></pre>
+              <p>This is the Hydraulic Institute form of static head for systems whose supply and destination boundaries have negligible velocity.</p>
+            </article>
+
+            <article class="formula-card">
+              <h3>9. Total system head (HI system curve)</h3>
+              <pre><code>H_system = Delta h_stat + ((fL / D) + SigmaK) (V^2 / 2g)</code></pre>
+              <p>This is the total head required by the system at a given flow rate. The application evaluates it at the operating point and also over a flow range to plot the system curve.</p>
+            </article>
+          </div>
+
+          <article class="assumption-block">
+            <h3>Assumptions and engineering notes</h3>
+            <ul>
+              <li>The current tool is intended for incompressible, Newtonian, non-gaseous, single-phase liquid flow in circular pipes.</li>
+              <li>The chart and formulas use the Darcy friction factor, not the Fanning friction factor.</li>
+              <li>The transitional interval is inherently uncertain; the tool therefore reports it explicitly rather than presenting false precision.</li>
+              <li>Absolute roughness values for commercial pipes are approximate design values; field-aged surfaces may deviate substantially.</li>
+              <li>The HI-style system curve assumes negligible velocities at the supply and destination boundaries unless those velocity-pressure terms are added separately.</li>
+              <li>Boundary pressures are treated as absolute liquid-service references only; no gas compressibility or two-phase model is included.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="tab-panel" id="references-tab">
+        <div class="panel prose-panel">
+          <div class="panel-header">
+            <h2>References and Reading List</h2>
+            <p>The bibliography combines canonical pipe-flow sources with the user-supplied reading list requested for this interface.</p>
+          </div>
+
+          <div id="referenceSections" class="reference-sections"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/data.js"></script>
+  <script src="js/formulas.js"></script>
+  <script src="js/chart.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
